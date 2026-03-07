@@ -7,7 +7,10 @@ on:
 jobs:
   run:
     name: Install dependencies and start server
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     permissions:
       contents: read
 
