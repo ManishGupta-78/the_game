@@ -1,0 +1,45 @@
+name: CI – Install & Run
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  run:
+    name: Install dependencies and start server
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Start server and verify it responds
+        run: |
+          node server.js &
+          SERVER_PID=$!
+          trap "kill $SERVER_PID 2>/dev/null" EXIT
+
+          # Wait up to 15 seconds for the server to be ready
+          for i in $(seq 1 15); do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/ 2>/dev/null || true)
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "Server started successfully and returned HTTP 200 ✓"
+              exit 0
+            fi
+            echo "Waiting for server… attempt $i/15 (status: ${HTTP_STATUS:-none})"
+            sleep 1
+          done
+
+          echo "Server did not respond with HTTP 200 within 15 seconds"
+          exit 1
