@@ -1,0 +1,15 @@
+{
+  "name": "portal-quest",
+  "version": "1.0.0",
+  "description": "Online board game with dynamic portals – like Snakes & Ladders but portals change every turn",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.3.0",
+    "socket.io": "^4.7.2"
+  }
+}
