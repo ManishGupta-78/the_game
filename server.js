@@ -343,13 +343,30 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     const room = rooms.get(socket.data.roomId);
     if (!room) return;
+
+    const leavingIdx = room.players.findIndex(p => p.id === socket.id);
     room.players = room.players.filter(p => p.id !== socket.id);
+
     if (room.players.filter(p => !p.isAI).length === 0) {
       if (room.aiTimer) clearTimeout(room.aiTimer);
       rooms.delete(room.id);
-    } else {
-      io.to(room.id).emit('player-left', { playerId: socket.id, room: roomPublicState(room) });
+      return;
     }
+
+    // Adjust currentPlayerIndex so it remains valid after the player array shrinks.
+    // After filtering, players at indices > leavingIdx each shift down by one, so the
+    // old currentPlayerIndex naturally points to the "next" player when the current
+    // player left; a modulo keeps it in-bounds when it was the last element.
+    if (leavingIdx !== -1 && room.gameStarted && !room.gameOver) {
+      if (leavingIdx < room.currentPlayerIndex) {
+        room.currentPlayerIndex -= 1;
+      } else if (leavingIdx === room.currentPlayerIndex) {
+        room.currentPlayerIndex = room.currentPlayerIndex % room.players.length;
+        scheduleAI(room.id);
+      }
+    }
+
+    io.to(room.id).emit('player-left', { playerId: socket.id, room: roomPublicState(room) });
   });
 });
 
