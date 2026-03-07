@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal Quest</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════ LOBBY ══════════════════════════════════ -->
+  <div id="screen-lobby" class="screen">
+    <div class="card">
+      <div class="logo">🌀</div>
+      <h1>Portal Quest</h1>
+      <p class="tagline">A board game where every square hides a secret portal</p>
+
+      <div class="field">
+        <label for="player-name">Your Name</label>
+        <input id="player-name" type="text" placeholder="Enter your name…" maxlength="20" autocomplete="off" />
+      </div>
+
+      <div class="btn-row">
+        <button id="btn-vs-ai"     class="btn btn-accent">🤖 vs Computer</button>
+        <button id="btn-create-online" class="btn btn-primary">🌐 Create Game</button>
+      </div>
+
+      <div class="divider">or join an existing game</div>
+
+      <div class="field-inline">
+        <input id="room-code-input" type="text" placeholder="Room code…" maxlength="6" autocomplete="off" />
+        <button id="btn-join" class="btn btn-outline">Join</button>
+      </div>
+
+      <p id="lobby-error" class="error-msg hidden"></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ WAITING ════════════════════════════════ -->
+  <div id="screen-waiting" class="screen hidden">
+    <div class="card">
+      <h2>Waiting for players…</h2>
+      <div class="room-code-box">
+        Room code: <strong id="room-code-display">——</strong>
+        <button class="btn-icon" id="btn-copy-code" title="Copy code">📋</button>
+      </div>
+      <ul id="waiting-list" class="player-list"></ul>
+      <button id="btn-start" class="btn btn-primary">▶ Start Game</button>
+      <p class="hint">2 – 4 players · Share the code with friends</p>
+      <p id="waiting-error" class="error-msg hidden"></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ GAME ══════════════════════════════════ -->
+  <div id="screen-game" class="screen hidden">
+    <div class="game-layout">
+
+      <!-- left panel -->
+      <aside class="panel panel-left" id="panel-players">
+        <h3>Players</h3>
+        <div id="player-status-list"></div>
+
+        <div class="dice-area">
+          <div id="dice-face">🎲</div>
+          <button id="btn-roll" class="btn btn-primary">Roll Dice</button>
+          <span class="hint-key">Space / Enter</span>
+        </div>
+
+        <div class="turn-box">
+          Turn: <strong id="turn-name">—</strong>
+        </div>
+      </aside>
+
+      <!-- board -->
+      <main class="board-wrap">
+        <canvas id="game-canvas"></canvas>
+      </main>
+
+      <!-- right panel -->
+      <aside class="panel panel-right">
+        <h3>Game Log</h3>
+        <div id="game-log"></div>
+
+        <div class="legend">
+          <h4>Legend</h4>
+          <div class="leg-item"><span class="leg-swatch" style="background:#27AE60"></span>Forward portal ↑</div>
+          <div class="leg-item"><span class="leg-swatch" style="background:#E74C3C"></span>Backward portal ↓</div>
+          <div class="leg-item"><span class="leg-swatch" style="background:#9b8a72"></span>Solid square</div>
+          <div class="leg-item"><span class="leg-swatch" style="background:#2c3e6b;border:1px solid #666"></span>Unknown</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ GAME OVER ═══════════════════════════════ -->
+  <div id="screen-gameover" class="screen hidden">
+    <div class="card gameover-card">
+      <div class="trophy">🏆</div>
+      <h1>Game Over!</h1>
+      <h2 id="winner-label">—</h2>
+      <div id="finish-order-list" class="finish-list"></div>
+      <button class="btn btn-primary" onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/client.js"></script>
+</body>
+</html>
