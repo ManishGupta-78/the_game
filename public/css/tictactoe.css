@@ -1,0 +1,106 @@
+/* ── Tic Tac Toe specific styles ─────────────────────────────────────────── */
+
+.ttt-game-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  gap: 24px;
+}
+
+.ttt-header {
+  text-align: center;
+}
+
+.ttt-header h1 {
+  font-size: 2.4rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.ttt-status {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  min-height: 1.6rem;
+  transition: color .2s;
+}
+.ttt-status.your-turn { color: var(--success); font-weight: 600; }
+.ttt-status.opponent-turn { color: var(--text-muted); }
+
+/* ── Board ────────────────────────────────────────────────────────────────── */
+.ttt-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+
+.ttt-cell {
+  width: 110px;
+  height: 110px;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-size: 3.2rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text);
+  transition: background .15s, transform .1s, border-color .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ttt-cell:not(:disabled):hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  transform: scale(1.04);
+}
+
+.ttt-cell:disabled { cursor: default; }
+
+.ttt-cell.mark-x { color: #E74C3C; }
+.ttt-cell.mark-o { color: #3498DB; }
+
+.ttt-cell.winning {
+  background: rgba(155,89,182,.18);
+  border-color: var(--accent);
+  animation: winPulse .6s ease-in-out 2;
+}
+
+@keyframes winPulse {
+  0%, 100% { transform: scale(1); }
+  50%  { transform: scale(1.08); }
+}
+
+/* ── Score row ────────────────────────────────────────────────────────────── */
+.ttt-score-row {
+  display: flex;
+  gap: 20px;
+  font-size: .9rem;
+  color: var(--text-muted);
+}
+.ttt-score-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 18px;
+  text-align: center;
+  min-width: 80px;
+}
+.ttt-score-item .score-label { font-size: .75rem; margin-bottom: 2px; }
+.ttt-score-item .score-value { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 420px) {
+  .ttt-cell { width: 85px; height: 85px; font-size: 2.4rem; }
+}

@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Portal Quest</title>
+  <title>Tic Tac Toe</title>
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/tictactoe.css" />
 </head>
 <body>
 
   <!-- ═══════════════════════════════ LOBBY ══════════════════════════════════ -->
   <div id="screen-lobby" class="screen">
     <div class="card">
-      <div class="logo">🌀</div>
-      <h1>Portal Quest</h1>
-      <p class="tagline">A board game where every square hides a secret portal</p>
+      <div class="logo">❌⭕</div>
+      <h1>Tic Tac Toe</h1>
+      <p class="tagline">Classic 3×3 battle — be first to line up three!</p>
 
       <div class="field">
         <label for="player-name">Your Name</label>
@@ -21,12 +22,9 @@
       </div>
 
       <div class="btn-row">
-        <button id="btn-vs-ai"     class="btn btn-accent">🤖 vs Computer</button>
+        <button id="btn-vs-ai"        class="btn btn-accent">🤖 vs Computer</button>
         <button id="btn-create-online" class="btn btn-primary">🌐 Create Game</button>
       </div>
-
-      <div class="divider">or play another game</div>
-      <a href="/tictactoe.html" class="btn btn-outline" style="display:block;text-decoration:none;margin-bottom:8px;">❌⭕ Tic Tac Toe</a>
 
       <div class="divider">or join an existing game</div>
 
@@ -36,78 +34,62 @@
       </div>
 
       <p id="lobby-error" class="error-msg hidden"></p>
+
+      <div class="divider">other games</div>
+      <a href="/" class="btn btn-outline" style="display:block;text-decoration:none;">🌀 Portal Quest</a>
     </div>
   </div>
 
   <!-- ═══════════════════════════════ WAITING ════════════════════════════════ -->
   <div id="screen-waiting" class="screen hidden">
     <div class="card">
-      <h2>Waiting for players…</h2>
+      <h2>Waiting for opponent…</h2>
       <div class="room-code-box">
         Room code: <strong id="room-code-display">——</strong>
         <button class="btn-icon" id="btn-copy-code" title="Copy code">📋</button>
       </div>
       <ul id="waiting-list" class="player-list"></ul>
-      <button id="btn-start" class="btn btn-primary">▶ Start Game</button>
-      <p class="hint">2 – 4 players · Share the code with friends</p>
+      <p class="hint">Share the code with a friend to start</p>
       <p id="waiting-error" class="error-msg hidden"></p>
     </div>
   </div>
 
   <!-- ═══════════════════════════════ GAME ══════════════════════════════════ -->
   <div id="screen-game" class="screen hidden">
-    <div class="game-layout">
+    <div class="ttt-game-wrap">
+      <div class="ttt-header">
+        <h1>Tic Tac Toe</h1>
+        <div id="ttt-status" class="ttt-status">—</div>
+      </div>
 
-      <!-- left panel -->
-      <aside class="panel panel-left" id="panel-players">
-        <h3>Players</h3>
-        <div id="player-status-list"></div>
+      <div class="ttt-board" id="ttt-board">
+        <button class="ttt-cell" data-idx="0"></button>
+        <button class="ttt-cell" data-idx="1"></button>
+        <button class="ttt-cell" data-idx="2"></button>
+        <button class="ttt-cell" data-idx="3"></button>
+        <button class="ttt-cell" data-idx="4"></button>
+        <button class="ttt-cell" data-idx="5"></button>
+        <button class="ttt-cell" data-idx="6"></button>
+        <button class="ttt-cell" data-idx="7"></button>
+        <button class="ttt-cell" data-idx="8"></button>
+      </div>
 
-        <div class="dice-area">
-          <div id="dice-face">🎲</div>
-          <button id="btn-roll" class="btn btn-primary">Roll Dice</button>
-          <span class="hint-key">Space / Enter</span>
-        </div>
-
-        <div class="turn-box">
-          Turn: <strong id="turn-name">—</strong>
-        </div>
-      </aside>
-
-      <!-- board -->
-      <main class="board-wrap">
-        <canvas id="game-canvas"></canvas>
-      </main>
-
-      <!-- right panel -->
-      <aside class="panel panel-right">
-        <h3>Game Log</h3>
-        <div id="game-log"></div>
-
-        <div class="legend">
-          <h4>Legend</h4>
-          <div class="leg-item"><span class="leg-swatch" style="background:#27AE60"></span>Forward portal ↑</div>
-          <div class="leg-item"><span class="leg-swatch" style="background:#E74C3C"></span>Backward portal ↓</div>
-          <div class="leg-item"><span class="leg-swatch" style="background:#9b8a72"></span>Solid square</div>
-          <div class="leg-item"><span class="leg-swatch" style="background:#2c3e6b;border:1px solid #666"></span>Unknown</div>
-        </div>
-      </aside>
+      <div class="ttt-score-row" id="ttt-score-row"></div>
     </div>
   </div>
 
   <!-- ══════════════════════════════ GAME OVER ═══════════════════════════════ -->
   <div id="screen-gameover" class="screen hidden">
     <div class="card gameover-card">
-      <div class="trophy">🏆</div>
+      <div class="trophy" id="gameover-icon">🏆</div>
       <h1>Game Over!</h1>
       <h2 id="winner-label">—</h2>
-      <div id="finish-order-list" class="finish-list"></div>
-      <button class="btn btn-primary" onclick="location.reload()">Play Again</button>
+      <button id="btn-play-again" class="btn btn-primary">Play Again</button>
+      <a href="/tictactoe.html" class="btn btn-outline" style="display:block;text-decoration:none;margin-top:10px;">New Game</a>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="js/renderer.js"></script>
-  <script src="js/client.js"></script>
+  <script src="js/tictactoe.js"></script>
 </body>
 </html>
