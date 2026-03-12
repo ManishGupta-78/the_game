@@ -260,6 +260,153 @@ function scheduleAI(roomId) {
   }, 1400);
 }
 
+// ─── Tic Tac Toe ─────────────────────────────────────────────────────────────
+
+const tttRooms = new Map();
+
+const TTT_WIN_LINES = [
+  [0,1,2],[3,4,5],[6,7,8],  // rows
+  [0,3,6],[1,4,7],[2,5,8],  // cols
+  [0,4,8],[2,4,6],           // diags
+];
+
+function tttGenerateRoomId() {
+  return 'T' + Math.random().toString(36).substring(2, 7).toUpperCase();
+}
+
+function tttCreateRoom(roomId, mode) {
+  return {
+    id: roomId,
+    mode,           // 'online' | 'vs-ai'
+    players: [],
+    board: Array(9).fill(null),
+    currentMark: 'X',
+    gameOver: false,
+    winLine: null,
+    aiTimer: null,
+  };
+}
+
+function tttAddPlayer(room, socketId, playerName, isAI) {
+  const mark = room.players.length === 0 ? 'X' : 'O';
+  const player = { id: socketId, name: playerName, isAI: isAI || false, mark, score: 0 };
+  room.players.push(player);
+  return player;
+}
+
+function tttRoomState(room) {
+  return {
+    id: room.id,
+    mode: room.mode,
+    players: room.players,
+    board: room.board,
+    currentMark: room.currentMark,
+    gameOver: room.gameOver,
+    winLine: room.winLine,
+  };
+}
+
+function tttCheckWinner(board) {
+  for (const line of TTT_WIN_LINES) {
+    const [a, b, c] = line;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return { mark: board[a], line };
+    }
+  }
+  return null;
+}
+
+function tttIsDraw(board) {
+  return board.every(cell => cell !== null);
+}
+
+/** Simple AI: win if possible, block if needed, otherwise pick best cell */
+function tttAIMove(board, aiMark) {
+  const opp = aiMark === 'X' ? 'O' : 'X';
+
+  function tryWin(mark) {
+    for (const line of TTT_WIN_LINES) {
+      const [a, b, c] = line;
+      const vals = [board[a], board[b], board[c]];
+      const markCount = vals.filter(v => v === mark).length;
+      const emptyCount = vals.filter(v => v === null).length;
+      if (markCount === 2 && emptyCount === 1) {
+        return line[vals.indexOf(null)];
+      }
+    }
+    return -1;
+  }
+
+  // 1. Win
+  let move = tryWin(aiMark);
+  if (move !== -1) return move;
+
+  // 2. Block
+  move = tryWin(opp);
+  if (move !== -1) return move;
+
+  // 3. Center
+  if (board[4] === null) return 4;
+
+  // 4. Corners
+  for (const c of [0, 2, 6, 8]) {
+    if (board[c] === null) return c;
+  }
+
+  // 5. Any empty
+  return board.findIndex(v => v === null);
+}
+
+function tttProcessMove(room, index) {
+  if (room.gameOver || room.board[index] !== null) return false;
+  const player = room.players.find(p => p.mark === room.currentMark);
+  if (!player) return false;
+
+  room.board[index] = room.currentMark;
+
+  const winResult = tttCheckWinner(room.board);
+  if (winResult) {
+    room.gameOver = true;
+    room.winLine  = winResult.line;
+    player.score = (player.score || 0) + 1;
+    return { winner: player.id };
+  }
+  if (tttIsDraw(room.board)) {
+    room.gameOver = true;
+    return { winner: null };
+  }
+
+  room.currentMark = room.currentMark === 'X' ? 'O' : 'X';
+  return null; // game continues
+}
+
+function tttScheduleAI(roomId) {
+  const room = tttRooms.get(roomId);
+  if (!room || room.gameOver || room.mode !== 'vs-ai') return;
+  const aiPlayer = room.players.find(p => p.isAI);
+  if (!aiPlayer || aiPlayer.mark !== room.currentMark) return;
+
+  if (room.aiTimer) clearTimeout(room.aiTimer);
+  room.aiTimer = setTimeout(() => {
+    const r = tttRooms.get(roomId);
+    if (!r || r.gameOver) return;
+    const ai = r.players.find(p => p.isAI);
+    if (!ai || ai.mark !== r.currentMark) return;
+
+    const idx = tttAIMove(r.board, ai.mark);
+    if (idx === -1) return;
+
+    const result = tttProcessMove(r, idx);
+    const state  = tttRoomState(r);
+
+    if (result !== null) {
+      io.to(roomId).emit('ttt-game-over', { room: state, result });
+    } else {
+      io.to(roomId).emit('ttt-move-made', { room: state });
+    }
+  }, 600);
+}
+
 // ─── Socket.io ───────────────────────────────────────────────────────────────
 
 io.on('connection', socket => {
@@ -339,8 +486,104 @@ io.on('connection', socket => {
     }, 900);
   });
 
-  // Disconnect
+  // ─── Tic Tac Toe events ────────────────────────────────────────────────────
+
+  socket.on('ttt-create-room', ({ playerName, mode }) => {
+    if (!playerName || typeof playerName !== 'string') return;
+    const name = playerName.slice(0, 20).trim() || 'Player';
+    const roomId = tttGenerateRoomId();
+    const room = tttCreateRoom(roomId, mode || 'online');
+    tttRooms.set(roomId, room);
+
+    const player = tttAddPlayer(room, socket.id, name, false);
+    socket.join(roomId);
+    socket.data.tttRoomId = roomId;
+
+    if (mode === 'vs-ai') {
+      tttAddPlayer(room, 'ttt-ai', 'Computer', true);
+      socket.emit('ttt-room-created', { roomId, player, room: tttRoomState(room) });
+      // Human is always X (added first); AI is O. X starts, so the human moves first.
+      tttScheduleAI(roomId);
+    } else {
+      socket.emit('ttt-room-created', { roomId, player, room: tttRoomState(room) });
+    }
+  });
+
+  socket.on('ttt-join-room', ({ roomId, playerName }) => {
+    if (!playerName || typeof playerName !== 'string') return;
+    const name = playerName.slice(0, 20).trim() || 'Player';
+    const id   = typeof roomId === 'string' ? roomId.toUpperCase() : '';
+    const room = tttRooms.get(id);
+    if (!room) { socket.emit('ttt-join-error', { message: 'Room not found' }); return; }
+    if (room.players.filter(p => !p.isAI).length >= 2) {
+      socket.emit('ttt-join-error', { message: 'Room is full' }); return;
+    }
+    if (room.gameOver) { socket.emit('ttt-join-error', { message: 'Game already over' }); return; }
+
+    const player = tttAddPlayer(room, socket.id, name, false);
+    socket.join(id);
+    socket.data.tttRoomId = id;
+
+    io.to(id).emit('ttt-player-joined', { room: tttRoomState(room) });
+    socket.emit('ttt-room-joined', { player, room: tttRoomState(room) });
+
+    // Auto-start when second player joins
+    if (room.players.filter(p => !p.isAI).length === 2) {
+      io.to(id).emit('ttt-game-started', { room: tttRoomState(room) });
+    }
+  });
+
+  socket.on('ttt-make-move', ({ index }) => {
+    const room = tttRooms.get(socket.data.tttRoomId);
+    if (!room || room.gameOver) return;
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player || player.mark !== room.currentMark) return;
+    if (typeof index !== 'number' || index < 0 || index > 8) return;
+
+    const result = tttProcessMove(room, index);
+    const state  = tttRoomState(room);
+
+    if (result !== null) {
+      io.to(room.id).emit('ttt-game-over', { room: state, result });
+    } else {
+      io.to(room.id).emit('ttt-move-made', { room: state });
+      tttScheduleAI(room.id);
+    }
+  });
+
+  socket.on('ttt-restart', () => {
+    const room = tttRooms.get(socket.data.tttRoomId);
+    if (!room) return;
+    // Preserve scores; reset board with X starting every round.
+    const prevScores = {};
+    room.players.forEach(p => { prevScores[p.id] = p.score || 0; });
+
+    room.board       = Array(9).fill(null);
+    room.currentMark = 'X';
+    room.gameOver    = false;
+    room.winLine     = null;
+
+    room.players.forEach(p => { p.score = prevScores[p.id]; });
+
+    io.to(room.id).emit('ttt-game-restarted', { room: tttRoomState(room) });
+    tttScheduleAI(room.id);
+  });
+
+  // Disconnect – clean up both Portal Quest and Tic Tac Toe rooms
   socket.on('disconnect', () => {
+    // TTT cleanup
+    const tttRoom = tttRooms.get(socket.data.tttRoomId);
+    if (tttRoom) {
+      tttRoom.players = tttRoom.players.filter(p => p.id !== socket.id);
+      if (tttRoom.aiTimer) clearTimeout(tttRoom.aiTimer);
+      if (tttRoom.players.filter(p => !p.isAI).length === 0) {
+        tttRooms.delete(tttRoom.id);
+      } else {
+        io.to(tttRoom.id).emit('ttt-player-left', {});
+      }
+    }
+
+    // Portal Quest cleanup
     const room = rooms.get(socket.data.roomId);
     if (!room) return;
 
